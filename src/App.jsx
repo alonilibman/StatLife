@@ -2,7 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import './index.css';
 
-const SUBJECTS = ['Physical', 'Mental', 'Social', 'Financial', 'Intellectual'];
+const PILLARS = {
+  "Vitality (Body)": ["Strength", "Endurance", "Flexibility", "Sleep Quality", "Nutrition", "Bio-hacking", "Recovery"],
+  "Cognitive (Mind)": ["Deep Focus", "Memory", "Critical Thinking", "Logic", "Learning Speed", "Pattern Recognition", "Curiosity"],
+  "Intimate (Relational)": ["Partner Happiness", "Romantic Stewardship", "Sexual Connection", "Conflict Resolution", "Shared Vision", "Loyalty", "Appreciation"],
+  "Economic (Wealth)": ["Saving Rate", "Investment Literacy", "Income Streams", "Debt Management", "Asset Protection", "Tax Optimization", "Wealth Mindset"],
+  "Mastery (Work)": ["Technical Skill", "Leadership", "Public Speaking", "Negotiation", "Networking", "Deep Work", "Mentorship"],
+  "Social (People)": ["Friendship Quality", "Family Bonds", "Empathy", "Social Calibration", "Community Impact", "Charisma", "Altruism"],
+  "Psychological (Self)": ["Resilience", "Discipline", "Self-Awareness", "Self-Confidence", "Emotional Regulation", "Vulnerability", "Integrity"],
+  "Philosophical (Soul)": ["Mindfulness", "Inner Peace", "Sense of Purpose", "Gratitude", "Moral Clarity", "Stoicism", "Ego Dissolution"],
+  "Pragmatic (Skills)": ["Handyman Ability", "Digital Security", "Self-Defense", "Navigation", "First Aid", "Survival Logic", "Culinary Mastery"],
+  "Aesthetic (Style)": ["Personal Style", "Home Environment", "Creative Output", "Musicality", "Curation", "Writing Ability", "Minimalism"]
+};
 
 export default function App() {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('statUser')));
@@ -26,18 +37,14 @@ export default function App() {
   async function handleAuth(e) {
     e.preventDefault();
     if (isSignUp) {
-      // Register
       const { data: existing } = await supabase.from('users').select('*').eq('username', username).single();
       if (existing) return alert("Username taken!");
-      
       const { error } = await supabase.from('users').insert([{ username, password, gender }]);
       if (error) return alert(error.message);
-      
       loginUser({ username, gender, is_admin: false });
     } else {
-      // Login
       const { data, error } = await supabase.from('users').select('*').eq('username', username).eq('password', password).single();
-      if (error || !data) return alert("Invalid Username or Password");
+      if (error || !data) return alert("Invalid credentials.");
       loginUser(data);
     }
   }
@@ -61,9 +68,9 @@ export default function App() {
   }
 
   if (!user) return (
-    <div className="container">
-      <div className="card">
-        <h1 style={{ textAlign: 'center', letterSpacing: '-2px' }}>STATLIFE</h1>
+    <div className="auth-wrapper">
+      <div className="auth-card">
+        <h1>STATLIFE</h1>
         <form onSubmit={handleAuth}>
           <input placeholder="USERNAME" required onChange={e => setUsername(e.target.value)} />
           <input type="password" placeholder="PASSWORD" required onChange={e => setPassword(e.target.value)} />
@@ -73,10 +80,10 @@ export default function App() {
               <option value="female">FEMALE</option>
             </select>
           )}
-          <button type="submit">{isSignUp ? 'CREATE ACCOUNT' : 'LOGIN'}</button>
+          <button type="submit">{isSignUp ? 'REGISTER' : 'LOGIN'}</button>
         </form>
-        <p style={{ textAlign: 'center', fontSize: '11px', cursor: 'pointer', marginTop: '20px', fontWeight:'bold' }} onClick={() => setIsSignUp(!isSignUp)}>
-          {isSignUp ? 'GO TO LOGIN' : 'REGISTER NEW USER'}
+        <p className="toggle-btn" onClick={() => setIsSignUp(!isSignUp)}>
+          {isSignUp ? 'EXISTING USER? LOGIN' : 'NEW HUMAN? REGISTER'}
         </p>
       </div>
     </div>
@@ -84,21 +91,31 @@ export default function App() {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
-        <h2 style={{ margin: 0 }}>{user.is_admin ? 'GLOBAL' : user.username.toUpperCase()}</h2>
-        <button onClick={logout} style={{ width: 'auto', background: 'none', color: 'red', padding: 0 }}>LOGOUT</button>
+      <div className="header">
+        <h1>STATLIFE</h1>
+        <div>
+          <span className="user-badge">{user.username.toUpperCase()}</span>
+          <button className="logout-btn" onClick={logout}>LOGOUT</button>
+        </div>
       </div>
 
       {user.is_admin ? <AdminStats /> : (
-        SUBJECTS.map(cat => (
-          <div key={cat} className="stat-row">
-            <div className="flex-bet">
-              <span>{cat.toUpperCase()}</span>
-              <span>{stats[cat] || 0}%</span>
+        <div className="pillar-grid">
+          {Object.entries(PILLARS).map(([pillar, categories]) => (
+            <div key={pillar} className="pillar-section">
+              <div className="pillar-title">{pillar}</div>
+              {categories.map(cat => (
+                <div key={cat} className="stat-card">
+                  <div className="flex-bet">
+                    <span>{cat}</span>
+                    <span className="val-text">{stats[cat] || 0}%</span>
+                  </div>
+                  <input type="range" min="0" max="100" value={stats[cat] || 0} onChange={e => updateStat(cat, parseInt(e.target.value))} />
+                </div>
+              ))}
             </div>
-            <input type="range" min="0" max="100" value={stats[cat] || 0} onChange={e => updateStat(cat, parseInt(e.target.value))} />
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   );
@@ -119,10 +136,10 @@ function AdminStats() {
   }, []);
 
   return (
-    <div>
+    <div className="admin-grid">
       {Object.keys(avg).map(c => (
-        <div key={c} className="card">
-          <div style={{ fontSize: '10px', fontWeight: 'bold' }}>{c.toUpperCase()} AVG</div>
+        <div key={c} className="card-mini">
+          <div className="mini-label">{c}</div>
           <div className="admin-val">{(avg[c].s / avg[c].n).toFixed(1)}%</div>
         </div>
       ))}
